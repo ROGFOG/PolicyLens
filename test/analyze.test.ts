@@ -1,0 +1,16 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { analyze } from '../src/analyze.ts';
+const ids = (text: string) => analyze(text).findings.map(f => f.id);
+test('empty and oversized inputs are rejected', () => { assert.throws(() => analyze(' ')); assert.throws(() => analyze('x'.repeat(100001))); });
+test('default-src does not restrict base, ancestors or forms', () => { const result = ids("default-src 'none'"); assert.ok(result.includes('missing-base')); assert.ok(result.includes('missing-ancestors')); assert.ok(result.includes('missing-form')); assert.ok(!result.includes('unrestricted-scripts')); });
+test('duplicate directives use first occurrence', () => { const result = ids("script-src *; script-src 'none'"); assert.ok(result.includes('duplicate-directive')); assert.ok(result.includes('broad-scripts')); });
+test('specific script sources override the script fallback', () => { const result = analyze("default-src *; script-src 'none'; script-src-elem 'self'"); assert.ok(!result.findings.some(f => f.id === 'broad-scripts')); });
+test('nonce changes inline warning severity', () => { const result = analyze("script-src 'nonce-abc123' 'unsafe-inline'"); assert.ok(result.findings.filter(f => f.id === 'inline-script').every(f => f.severity === 'note')); });
+test('report-only is not enforcement', () => { const result = analyze("Content-Security-Policy-Report-Only: default-src 'none'"); assert.equal(result.policyCount, 0); assert.ok(result.findings.some(f => f.id === 'missing-csp')); });
+test('case-insensitive headers and duplicate CSP remain separate', () => { const result = analyze("CONTENT-SECURITY-POLICY: default-src 'none'\nContent-Security-Policy: script-src *\nX-Content-Type-Options: nosniff"); assert.equal(result.policyCount, 2); assert.equal(result.headerCount, 3); assert.ok(result.findings.some(f => f.id === 'multiple-csp')); assert.ok(!result.findings.some(f => f.id === 'nosniff')); });
+test('comma-separated policies are not incorrectly treated as one', () => { const result = ids("default-src 'self', script-src *"); assert.ok(result.includes('multiple-csp')); assert.ok(!result.includes('broad-scripts')); });
+test('unsafe-eval is checked on script-src, not script-src-elem', () => { assert.ok(ids("script-src 'unsafe-eval'; script-src-elem 'none'").includes('unsafe-eval')); });
+test('fully restricted example produces no findings', () => { assert.equal(analyze("default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'").findings.length, 0); });
+test('source URLs are not mistaken for header prefixes', () => { assert.equal(analyze("script-src https://example.com").policyCount, 1); });
+test('mixed none is called out', () => { assert.ok(ids("default-src 'none' 'self'").includes('mixed-none')); });

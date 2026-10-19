@@ -1,0 +1,19 @@
+{
+  "name": "policylens",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc && node tools/build.mjs",
+    "dev": "npm run build && node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}
