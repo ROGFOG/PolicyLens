@@ -1,37 +1,14 @@
 # PolicyLens
 
-Paste a Content Security Policy or HTTP response headers to review script
-permissions, directive fallbacks and missing restrictions. Each finding links
-to the relevant documentation. All processing happens in the browser.
+Read a Content Security Policy without hunting through every directive by hand.
+Paste a policy or response headers, inspect the script restrictions, then save
+findings as JSON. The input stays in the browser.
 
-[Open the workbench](https://rogfog.github.io/PolicyLens/) · [Design notes, RU](docs/design.ru.md)
+[Try PolicyLens](https://rogfog.github.io/PolicyLens/)
 
 ![PolicyLens workbench](docs/screenshot.png)
 
-## What it checks
-
-- Script-source fallbacks, broad source lists, inline permissions and unsafe-eval.
-- Repeated directives (first occurrence wins) and mixed `'none'` source lists.
-- Explicit base-uri, frame-ancestors and form-action restrictions.
-- Presence of an enforcing CSP, nosniff and contextual transport/referrer notes.
-- Multiple policies and Report-Only are called out rather than silently merged.
-
-Processing happens entirely in your browser. No URL scanner, uploads, cookies,
-analytics, persistence or runtime dependencies. JSON reports are downloaded locally.
-
-## Run locally
-
-Requires Node.js 24+ and npm.
-
-```sh
-npm ci --ignore-scripts
-npm test
-npm run dev
-```
-
-Open http://127.0.0.1:4173. `npm run build` writes the static site to `dist/`.
-
-## Example
+## Start with a policy
 
 ```http
 Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; object-src 'none'
@@ -39,27 +16,42 @@ X-Content-Type-Options: nosniff
 Referrer-Policy: strict-origin-when-cross-origin
 ```
 
-Review the inline-script permission and the missing base-uri restriction. A
-default-src policy does not restrict base-uri, form-action or frame-ancestors.
+This example produces six findings: inline permissions for script elements and
+attributes, missing base-uri, frame-ancestors and form-action, plus an HSTS
+transport note. Those three CSP directives need their own values even when
+default-src is set. The HSTS note needs the actual HTTPS deployment context.
 
-## Limits
+The analyzer also handles duplicate directives, script-source fallbacks,
+unsafe-eval, broad sources and mixed 'none' lists. Header input adds checks for
+nosniff, Report-Only, HSTS and Referrer-Policy. Each finding links to a reference;
+the severity filter and JSON export work on the same report.
 
-This is a focused static review, not a complete CSP parser or a certification.
-Checks review individual policies; another enforced policy may mitigate a note.
-Comma-separated policy lists are identified but not analyzed. Nonces, hashes,
-browser compatibility and application behavior require additional context.
-HSTS notes do not establish that the pasted response was served over HTTPS.
-Test changes with your application before enforcement; do not paste credentials.
+## Known issues
 
-## Development
+Comma-separated policy lists are detected and skipped. Separate CSP headers are
+reviewed individually, although browsers enforce them together. Nonce generation,
+hash matching, HTTPS deployment and browser compatibility need a running page to
+check. Treat the report as a starting point for testing policy changes.
 
-The analyzer is independent of the DOM. Tests cover fallback behavior, duplicate
-directives, Report-Only, multiple policies and input limits. CI tests and builds
-pull requests; the Pages workflow publishes tested builds from main.
+## Local development
 
-See [open tasks](https://github.com/ROGFOG/PolicyLens/issues) for the next steps.
+Node.js 24+ and npm:
+
+```sh
+npm ci --ignore-scripts
+npm test
+npm run dev
+```
+
+Open http://127.0.0.1:4173. `npm run build` writes the Pages site to `dist/`.
+There are no runtime dependencies, network requests from the analyzer or saved
+inputs. `src/analyze.ts` holds the rules; `src/main.ts` handles the form and export.
+
+[Разбор примера и устройства анализатора](docs/design.ru.md) explains fallback
+order and why duplicate directives keep their first value.
+
+Checked on Windows with Node.js 24.14.0: 12 tests and the TypeScript/static build.
+CI repeats the tests and build on Ubuntu before publication.
 
 References: [MDN CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy),
-[CSP Level 3](https://www.w3.org/TR/CSP3/).
-
-MIT license.
+[CSP Level 3](https://www.w3.org/TR/CSP3/). Source: [MIT](LICENSE).
