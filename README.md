@@ -1,8 +1,8 @@
 # PolicyLens
 
-A local-first workbench for understanding Content Security Policy and HTTP
-security headers. Paste a response or a bare CSP, then inspect contextual review
-notes with links to the relevant documentation.
+Paste a Content Security Policy or HTTP response headers to review script
+permissions, directive fallbacks and missing restrictions. Each finding links
+to the relevant documentation. All processing happens in the browser.
 
 [Open the workbench](https://rogfog.github.io/PolicyLens/) · [Design notes, RU](docs/design.ru.md)
 
